@@ -30,10 +30,35 @@ def part1_calculate_T_pose(bvh_file_path):
     Tips:
         joint_name顺序应该和bvh一致
     """
-    joint_name = None
-    joint_parent = None
-    joint_offset = None
+    joint_name = []
+    joint_parent = []
+    joint_offset = []
+    stack = []
+    with open(bvh_file_path, 'r') as f:
+        lines = f.readlines()
+        for i in range(len(lines)):
+            line = lines[i].strip()
+            if line.startswith('ROOT'):
+                joint_name.append(line.split()[1])
+                joint_parent.append(-1)
+                stack.append(len(joint_name)-1)
+            elif line.startswith('JOINT'):
+                joint_name.append(line.split()[1])
+                joint_parent.append(stack[-1])
+                stack.append(len(joint_name)-1)
+            elif line.startswith('End Site'):
+                joint_name.append(joint_name[stack[-1]] + '_end')
+                joint_parent.append(stack[-1])
+                stack.append(len(joint_name)-1)
+            elif line.startswith('OFFSET'):
+                joint_offset.append([float(x) for x in line.split()[1:]])
+            elif line.startswith('}'):
+                stack.pop()
+
+    joint_offset = np.array(joint_offset).reshape(len(joint_offset), 3)
     return joint_name, joint_parent, joint_offset
+
+
 
 
 def part2_forward_kinematics(joint_name, joint_parent, joint_offset, motion_data, frame_id):
@@ -48,8 +73,26 @@ def part2_forward_kinematics(joint_name, joint_parent, joint_offset, motion_data
         1. joint_orientations的四元数顺序为(x, y, z, w)
         2. from_euler时注意使用大写的XYZ
     """
-    joint_positions = None
-    joint_orientations = None
+    joint_positions = []
+    joint_orientations = []
+    motion_data_frame = motion_data[frame_id]
+    for i in range(len(joint_name)):
+        joint =joint_name [i]
+        if joint.startswith("Root"):
+            joint_positions[0] = joint_offset[0]+ motion_data_frame[0:3]
+            joint_orientations[0] =R.from_euler('XYZ', motion_data_frame[3:6], degrees=True) 
+        if joint.endwith("Root"):
+            joint_positions[i] = joint_offset[0]+ motion_data_frame[0:3]
+            joint_orientations[i] = joint_positions[joint_parent[i]] + joint_offset[i] 
+        
+
+
+
+
+
+
+
+
     return joint_positions, joint_orientations
 
 
