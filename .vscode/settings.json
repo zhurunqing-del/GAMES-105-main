@@ -1,0 +1,8 @@
+{
+    "python-envs.defaultEnvManager": "ms-python.python:system",
+    "python-envs.pythonProjects": [],
+    "python.condaPath": "C:\\Users\\admin\\Miniconda3\\Scripts\\conda.exe",
+    "python.defaultInterpreterPath": "C:\\Users\\admin\\Miniconda3\\python.exe",
+    "python.terminal.activateEnvironment": true,
+    "terminal.integrated.shell.windows": "C:\\Windows\\System32\\cmd.exe"
+}
