@@ -73,26 +73,37 @@ def part2_forward_kinematics(joint_name, joint_parent, joint_offset, motion_data
         1. joint_orientations的四元数顺序为(x, y, z, w)
         2. from_euler时注意使用大写的XYZ
     """
-    joint_positions = []
-    joint_orientations = []
+    joint_positions = np.zeros((len(joint_name), 3))
+    joint_orientations = np.zeros((len(joint_name), 4))
+    cnt = 0 # 通道计数器
+
     motion_data_frame = motion_data[frame_id]
     for i in range(len(joint_name)):
         joint =joint_name [i]
-        if joint.startswith("Root"):
-            joint_positions[0] = joint_offset[0]+ motion_data_frame[0:3]
-            joint_orientations[0] =R.from_euler('XYZ', motion_data_frame[3:6], degrees=True) 
-        if joint.endwith("Root"):
-            joint_positions[i] = joint_offset[0]+ motion_data_frame[0:3]
-            joint_orientations[i] = joint_positions[joint_parent[i]] + joint_offset[i] 
-        
+        parent_idx = joint_parent[i]
 
+        if i == 0:
+            joint_positions[0] = motion_data_frame[cnt:cnt+3]
+            cnt += 3
+            joint_orientations[0] =R.from_euler('XYZ', motion_data_frame[cnt:cnt+3], degrees=True).as_quat()
+            cnt += 3
 
+        elif joint.endswith("_end"):
+            # End Site 没有通道数据，cnt 不增加
+            parent_pos = joint_positions[parent_idx]
+            parent_rot = R.from_quat(joint_orientations[parent_idx]) 
 
+            joint_positions[i] = parent_pos + parent_rot.apply(joint_offset[i])
+            joint_orientations[i] = joint_orientations[parent_idx] 
+        else :
+            rotation_local = R.from_euler('XYZ', motion_data_frame[cnt:cnt+3], degrees=True)
+            cnt += 3
 
+            parent_pos = joint_positions[parent_idx]
+            parent_rot = R.from_quat(joint_orientations[parent_idx]) 
 
-
-
-
+            joint_positions[i] =  parent_pos + parent_rot.apply(joint_offset[i])
+            joint_orientations[i] =(parent_rot * rotation_local).as_quat()
     return joint_positions, joint_orientations
 
 
@@ -107,4 +118,9 @@ def part3_retarget_func(T_pose_bvh_path, A_pose_bvh_path):
         as_euler时也需要大写的XYZ
     """
     motion_data = None
+
+    
+
+
+
     return motion_data
