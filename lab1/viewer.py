@@ -1,4 +1,5 @@
 from direct.showbase.ShowBase import ShowBase
+from direct.showbase.ShowBaseGlobal import globalClock  # 直接导入
 import numpy as np
 from panda3d.core import ClockObject
 import panda3d.core as pc
@@ -327,7 +328,7 @@ class SimpleViewer(ShowBase):
         return task.cont
     
     def load_character(self):
-        info = np.load('character_model.npy', allow_pickle=True).item()
+        info = np.load('lab1/character_model.npy', allow_pickle=True).item()
         joint_pos = info['joint_pos']
         body_pos = info['body_pos']
         joint_name = info['joint_name']

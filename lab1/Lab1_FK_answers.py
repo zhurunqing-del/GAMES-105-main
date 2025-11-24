@@ -114,13 +114,62 @@ def part3_retarget_func(T_pose_bvh_path, A_pose_bvh_path):
     输出: 
         motion_data: np.ndarray，形状为(N,X)的numpy数组，其中N为帧数，X为Channel数。retarget后的运动数据
     Tips:
-        两个bvh的joint name顺序可能不一致哦(
+        两个bvh的joint name顺序可能不一致
         as_euler时也需要大写的XYZ
     """
-    motion_data = None
+    # 读取两份骨架拓扑（仅关节顺序和 EndSite 信息）
+    joint_name_T, _, _ = part1_calculate_T_pose(T_pose_bvh_path)
+    joint_name_A, _, _ = part1_calculate_T_pose(A_pose_bvh_path)
 
+    # 读取 A-pose 的动作数据
+    motion_data_A = load_motion_data(A_pose_bvh_path)
+    # 计算每个关节在通道向量中的旋转起始索引（根6通道，其他3通道，EndSite 0通道）
+    def build_rot_start_indices(joint_names):
+        rot_start={}
+        cnt = 0
+        for idx, name in enumerate(joint_names):
+            if idx ==0:
+                rot_start[name] =3
+                cnt = 6
+            elif name.endswith('_end'):
+                rot_start[name] = None
+            else:
+                rot_start[name] = cnt
+                cnt+=3
+        total_channels = cnt
+        return rot_start, total_channels
     
+    rot_start_A, total_A = build_rot_start_indices(joint_name_A)
+    rot_start_T, total_T = build_rot_start_indices(joint_name_T)
 
+    N = motion_data_A.shape[0]
+    X_T =total_T
+    motion_data = np.zeros((N, X_T), dtype=np.float64)
 
+    for f in range(N):
+        src = motion_data_A[f]
+        dst = motion_data[f]
 
+        for idx, name in enumerate(joint_name_T):
+            cnt_src = rot_start_A [name]
+            cnt_dst = rot_start_T [name]
+            if idx ==0:
+                dst[0:6] = src[0:6]
+            elif name.endswith('_end'):
+                continue
+            elif name == 'lShoulder':
+                angles =src[cnt_src:cnt_src+3]  
+                rotation_local = R.from_euler('XYZ', angles, degrees=True)
+                A2T_rot = R.from_euler('XYZ', [0, 0, -45], degrees=True)
+                angles_T = (A2T_rot * rotation_local).as_euler('XYZ', degrees=True)
+                dst[cnt_dst:cnt_dst+3] = angles_T
+            elif name == 'rShoulder':
+                angles =src[cnt_src:cnt_src+3]
+                rotation_local = R.from_euler('XYZ', angles, degrees=True)
+                A2T_rot = R.from_euler('XYZ', [0, 0, 45], degrees=True)
+                angles_T = (A2T_rot * rotation_local).as_euler('XYZ', degrees=True)
+                dst[cnt_dst:cnt_dst+3] = angles_T
+            else:
+                dst[cnt_dst:cnt_dst+3] = src[cnt_src:cnt_src+3]
     return motion_data
+

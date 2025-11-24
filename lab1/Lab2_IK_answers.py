@@ -14,7 +14,46 @@ def part1_inverse_kinematics(meta_data, joint_positions, joint_orientations, tar
         joint_positions: 计算得到的关节位置，是一个numpy数组，shape为(M, 3)，M为关节数
         joint_orientations: 计算得到的关节朝向，是一个numpy数组，shape为(M, 4)，M为关节数
     """
-    
+    path, path_name, path1, path2 =  meta_data.get_path_from_root_to_end()
+    max_iters = 20
+    ε = 0.01
+    a = 0.5
+    joint_orientations = np.zeros((len(meta_data.joint_name), 4))
+    joint_positions = np.zeros((len(meta_data.joint_namee), 3))
+    for iter in range(max_iters):
+        for i in range(len(meta_data.joint_name)):
+            joint =meta_data.joint_name [i]
+            parent_idx = meta_data.joint_parent[i]
+
+            if i == 0:
+                joint_positions[0] = meta_data.joint_initial_position[0]
+
+            elif joint.endswith("_end"):
+                joint_positions[i] = joint_positions[parent_idx]+meta_data.joint_initial_position[i]
+
+            else :
+                joint_positions[i] = joint_positions[parent_idx]+meta_data.joint_initial_position[i]
+            p_cur = joint_positions[path[-1]]
+            e = target_pose - p_cur
+            if abs(e) < ε:
+                return joint_positions, joint_orientations
+            J = np.zeros(3, (len(path1)-1)*3+1)
+            for i in path1:
+                u_x = R.from_quat(joint_orientations[path1[i]])* [1,0,0]
+                u_y = R.from_quat(joint_orientations[path1[i]])* [0,1,0]
+                u_z = R.from_quat(joint_orientations[path1[i]])* [0,0,1]
+                r = joint_positions[path1[-1]]-joint_positions[path1[i]]
+                J[i, i] = u*r
+
+
+
+
+
+
+
+
+
+
     
     return joint_positions, joint_orientations
 
