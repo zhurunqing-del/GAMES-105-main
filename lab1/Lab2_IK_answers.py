@@ -17,32 +17,46 @@ def part1_inverse_kinematics(meta_data, joint_positions, joint_orientations, tar
     path, path_name, path1, path2 = meta_data.get_path_from_root_to_end()
         
     # 获取从根节点到末端执行器的路径
-    path_to_end_effector = path1
+    path_to_end_effector = path
     
     # 迭代参数
     max_iterations = 20
     tolerance = 0.01
-    alpha = 0.1
+    alpha = 0.5
+
+    # 预计算T-pose下的局部偏移
+    joint_offsets = np.zeros_like(meta_data.joint_initial_position)
+    for i in range(len(meta_data.joint_name)):
+        parent_idx =  meta_data.joint_parent[i]
+        if parent_idx == -1:
+            joint_offsets[i] = meta_data.joint_initial_position[i]
+        else:
+            joint_offsets[i] = meta_data.joint_initial_position[i] - meta_data.joint_initial_position[parent_idx]
     
     # 复制一份以防修改原始数据
     ik_joint_positions = joint_positions.copy()
     ik_joint_orientations = joint_orientations.copy()
+    
+    # 保存根关节的初始位置
 
     for iter in range(max_iterations):
         
         # 1. 正向动力学 (FK)，更新所有关节的位置
-        for i in range(len(meta_data.joint_name)):
-            if meta_data.joint_parent[i] == -1: # Root joint
-                continue
-            parent_idx = meta_data.joint_parent[i]
-            parent_orientation = R.from_quat(ik_joint_orientations[parent_idx])
-            
-            # 从父关节旋转和初始偏移计算当前关节的位置
-            ik_joint_positions[i] = ik_joint_positions[parent_idx] + parent_orientation.apply(meta_data.joint_initial_position[i])
 
+        # for i in range(len(meta_data.joint_name)):
+        #     if i in path:
+        #         continue
+        #     else:
+        #         parent_idx = meta_data.joint_parent[i]
+        #         if parent_idx == -1:
+        #             continue
+        #         parent_orientation = R.from_quat(ik_joint_orientations[parent_idx])
+        #         ik_joint_positions[i] = ik_joint_positions[parent_idx] + parent_orientation.apply(joint_offsets[i])
+        
+        
         # 2. 计算误差
         end_effector_pos = ik_joint_positions[path_to_end_effector[-1]]
-        error = target_pose - end_effector_pos
+        error =  end_effector_pos - target_pose
         
         # 检查是否收敛
         if np.linalg.norm(error) < tolerance:
@@ -50,7 +64,7 @@ def part1_inverse_kinematics(meta_data, joint_positions, joint_orientations, tar
             
         # 3. 构建雅可比矩阵 J
         # 路径中除了末端执行器外的所有关节都可以旋转
-        movable_joints = path_to_end_effector[:-1]
+        movable_joints = path_to_end_effector[3:-1]
         J = np.zeros((3, len(movable_joints) * 3))
         
         for i, joint_idx in enumerate(movable_joints):
@@ -58,7 +72,7 @@ def part1_inverse_kinematics(meta_data, joint_positions, joint_orientations, tar
             joint_orientation = R.from_quat(ik_joint_orientations[joint_idx])
             
             # 计算从当前关节到末端执行器的向量
-            r = end_effector_pos - joint_pos
+            r =  joint_pos-end_effector_pos
             
             # 计算世界坐标系下的旋转轴
             axis_x = joint_orientation.apply([1, 0, 0])
@@ -85,15 +99,21 @@ def part1_inverse_kinematics(meta_data, joint_positions, joint_orientations, tar
             
             # 标准化四元数并更新
             ik_joint_orientations[joint_idx] = new_rot.as_quat()
-            
+            if i ==0:
+                parent_idx = path_to_end_effector[2]
+                orientation = R.from_quat(ik_joint_orientations[joint_idx])
+                position = ik_joint_positions[parent_idx]
+                ik_joint_positions[joint_idx]=  position + orientation.apply(joint_offsets[parent_idx])
+            # else:
+            #     parent_idx = movable_joints[i-1]
+            #     orientation = R.from_quat(ik_joint_orientations[parent_idx])
+            #     ik_joint_positions[joint_idx] = ik_joint_positions[parent_idx] + parent_orientation.apply(-joint_offsets[joint_idx])
 
     # 在循环结束后，最后进行一次FK以确保位置和旋转是匹配的
-    # for i in range(len(meta_data.joint_name)):
-    #     if meta_data.joint_parent[i] == -1:
-    #         continue
+    # for i in range(1, len(meta_data.joint_name)):
     #     parent_idx = meta_data.joint_parent[i]
     #     parent_orientation = R.from_quat(ik_joint_orientations[parent_idx])
-    #     ik_joint_positions[i] = ik_joint_positions[parent_idx] + parent_orientation.apply(meta_data.joint_initial_position[i])
+    #     ik_joint_positions[i] = ik_joint_positions[parent_idx] + parent_orientation.apply(joint_offsets[i])
         
     return ik_joint_positions, ik_joint_orientations
 
