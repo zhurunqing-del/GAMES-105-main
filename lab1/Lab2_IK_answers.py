@@ -99,15 +99,23 @@ def part1_inverse_kinematics(meta_data, joint_positions, joint_orientations, tar
             
             # 标准化四元数并更新
             ik_joint_orientations[joint_idx] = new_rot.as_quat()
-            if i ==0:
-                parent_idx = path_to_end_effector[2]
-                orientation = R.from_quat(ik_joint_orientations[joint_idx])
-                position = ik_joint_positions[parent_idx]
-                ik_joint_positions[joint_idx]=  position + orientation.apply(joint_offsets[parent_idx])
-            # else:
-            #     parent_idx = movable_joints[i-1]
-            #     orientation = R.from_quat(ik_joint_orientations[parent_idx])
-            #     ik_joint_positions[joint_idx] = ik_joint_positions[parent_idx] + parent_orientation.apply(-joint_offsets[joint_idx])
+
+            # for joint_idx in path_to_end_effector[1:]:
+            #     parent_idx = meta_data.joint_parent[joint_idx]
+            #     parent_orient = R.from_quat(ik_joint_orientations[parent_idx])
+            #     ik_joint_positions[joint_idx] = (
+            #         ik_joint_positions[parent_idx]
+            #         + parent_orient.apply(joint_offsets[joint_idx])
+            #     )
+    
+            # 按照关节链条顺序更新位置，从root到末端
+            # for k in range(1, len(movable_joints)):
+            #     parent_idx = path_to_end_effector[k+1]
+            #     child_idx = path_to_end_effector[k+2]
+            #     parent_orient = R.from_quat(ik_joint_orientations[parent_idx])
+            #     ik_joint_positions[child_idx] = (
+            #         ik_joint_positions[parent_idx] + parent_orient.apply(joint_offsets[child_idx])
+            #     )
 
     # 在循环结束后，最后进行一次FK以确保位置和旋转是匹配的
     # for i in range(1, len(meta_data.joint_name)):
@@ -129,5 +137,7 @@ def bonus_inverse_kinematics(meta_data, joint_positions, joint_orientations, lef
     """
     输入左手和右手的目标位置，固定左脚，完成函数，计算逆运动学
     """
+    
+    return joint_positions, joint_orientations
     
     return joint_positions, joint_orientations
