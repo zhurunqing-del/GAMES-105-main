@@ -29,10 +29,20 @@ def part1_inverse_kinematics(meta_data, joint_positions, joint_orientations, tar
     for i in range(len(meta_data.joint_name)):
         parent_idx =  meta_data.joint_parent[i]
         if parent_idx == -1:
-            joint_offsets[i] = meta_data.joint_initial_position[i]
+            joint_offsets[i] = meta_data.joint_initial_position[parent_idx]
         else:
             joint_offsets[i] = meta_data.joint_initial_position[i] - meta_data.joint_initial_position[parent_idx]
     
+    # 预计算T-pose下的局部偏移
+    # joint_offsets_ik = np.zeros((len(path_to_end_effector),3))
+    # for i in range(len(path_to_end_effector)):
+    #     parent_idx =  path_to_end_effector[i-1]
+    #     idx = path_to_end_effector[i]
+    #     if parent_idx == -1:
+    #         joint_offsets_ik[i] = [0,0,0]
+    #     else:
+    #         joint_offsets_ik[i] = meta_data.joint_initial_position[idx] - meta_data.joint_initial_position[parent_idx]
+
     # 复制一份以防修改原始数据
     ik_joint_positions = joint_positions.copy()
     ik_joint_orientations = joint_orientations.copy()
@@ -43,15 +53,15 @@ def part1_inverse_kinematics(meta_data, joint_positions, joint_orientations, tar
         
         # 1. 正向动力学 (FK)，更新所有关节的位置
 
-        # for i in range(len(meta_data.joint_name)):
-        #     if i in path:
-        #         continue
-        #     else:
-        #         parent_idx = meta_data.joint_parent[i]
-        #         if parent_idx == -1:
-        #             continue
-        #         parent_orientation = R.from_quat(ik_joint_orientations[parent_idx])
-        #         ik_joint_positions[i] = ik_joint_positions[parent_idx] + parent_orientation.apply(joint_offsets[i])
+        for i in range(len(meta_data.joint_name)):
+            if i in path2:
+                continue
+            else:
+                parent_idx = meta_data.joint_parent[i]
+                if parent_idx == -1:
+                    continue
+                parent_orientation = R.from_quat(ik_joint_orientations[parent_idx])
+                ik_joint_positions[i] = ik_joint_positions[parent_idx] + parent_orientation.apply(joint_offsets[i])
         
         
         # 2. 计算误差
@@ -109,14 +119,20 @@ def part1_inverse_kinematics(meta_data, joint_positions, joint_orientations, tar
             #     )
     
             # 按照关节链条顺序更新位置，从root到末端
-            # for k in range(1, len(movable_joints)):
-            #     parent_idx = path_to_end_effector[k+1]
-            #     child_idx = path_to_end_effector[k+2]
-            #     parent_orient = R.from_quat(ik_joint_orientations[parent_idx])
-            #     ik_joint_positions[child_idx] = (
-            #         ik_joint_positions[parent_idx] + parent_orient.apply(joint_offsets[child_idx])
-            #     )
+            for k,idx in enumerate(path2):
+                if k >2:
+                    parent_idx =path2[k]
+                    child_idx = path2[k-1]
+                    parent_orient = R.from_quat(ik_joint_orientations[parent_idx])
+                    move = (ik_joint_positions[parent_idx] + parent_orient.apply(joint_offsets[child_idx]))-ik_joint_positions[child_idx]
+                    ik_joint_positions[parent_idx] -=move
 
+
+                # parent_idx =path_to_end_effector[k+2] 
+                # child_idx = path_to_end_effector[k+3
+                # parent_orient = R.from_quat(ik_joint_orientations[parent_idx])
+                # ik_joint_positions[child_idx] = ik_joint_positions[parent_idx] + parent_orient.apply(joint_offsets_ik[k+3])
+                    
     # 在循环结束后，最后进行一次FK以确保位置和旋转是匹配的
     # for i in range(1, len(meta_data.joint_name)):
     #     parent_idx = meta_data.joint_parent[i]
