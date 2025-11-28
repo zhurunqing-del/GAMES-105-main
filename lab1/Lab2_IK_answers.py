@@ -170,21 +170,23 @@ def part2_inverse_kinematics(meta_data, joint_positions, joint_orientations, rel
     
 
     # 复制一份以防修改原始数据
-    ik_joint_positions = meta_data.joint_initial_position
+    ik_joint_positions = np.zeros((len(meta_data.joint_name), 3))
     ik_joint_orientations = joint_orientations.copy()
     
-    # 循环
-    for iter in range(max_iterations):
+    # # 循环
+    # for iter in range(max_iterations):
         
-        # 1. 正向动力学 (FK)，更新所有关节的位置
-        for i in range(len(meta_data.joint_name)):
+    # 1. 正向动力学 (FK)，更新所有关节的位置
+    for i in range(len(meta_data.joint_name)):
+        if i == 0:
+            ik_joint_positions[i] = joint_positions[0]
+        else:
             parent_idx = meta_data.joint_parent[i]
-            if i in path:
-                parent_rot = R.from_quat(ik_joint_orientations[parent_idx])
-                ik_joint_positions[i] = ik_joint_positions[parent_idx] + parent_rot.apply(joint_offsets[i])
-            # if parent_idx == path[-1]:
-            #     parent_rot = R.from_quat(ik_joint_orientations[parent_idx])
-            #     ik_joint_positions[i] = ik_joint_positions[parent_idx] + parent_rot.apply(joint_offsets[i])
+            parent_rot = R.from_quat(ik_joint_orientations[parent_idx])
+            ik_joint_positions[i] = ik_joint_positions[parent_idx] +parent_rot.apply(joint_offsets[i])
+        # if parent_idx == path[-1]:
+        #     parent_rot = R.from_quat(ik_joint_orientations[parent_idx])
+        #     ik_joint_positions[i] = ik_joint_positions[parent_idx] + parent_rot.apply(joint_offsets[i])
 
         #手臂关节归零
         # for i ,idx in enumerate(path_to_end_effector) :
